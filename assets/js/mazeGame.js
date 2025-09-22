@@ -1,7 +1,6 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// Base cell size for visibility
 let baseCellSize = 40;
 let cellSize = baseCellSize;
 let rows, cols;
@@ -9,28 +8,21 @@ let player = {x:0, y:0};
 let exit = {x:0, y:0};
 let currentDifficulty = "easy";
 
-// Timer variables
 let startTime = null;
 let timerInterval = null;
 let timerStarted = false;
 
-// Animation variables
 let animating = false;
 let animX = 0;
 let animY = 0;
-const animSpeed = 0.2; // fraction per frame
+const animSpeed = 0.2;
 
-// Debug toggle
-const DEBUG = true; // set false when done
+let debugMode = true;
 
-// Load sprites
-const mouseImg = new Image();
-mouseImg.src = "assets/img/mouse.png";
+// Player direction
+let playerDirection = "right";
 
-const cheeseImg = new Image();
-cheeseImg.src = "assets/img/cheese.png";
-
-// Adjust cell size dynamically based on screen and difficulty
+// Adjust cell size based on window size and difficulty
 function adjustCellSize(difficulty) {
   let maxWidth = window.innerWidth - 40;
   let maxHeight = window.innerHeight - 150;
@@ -47,7 +39,7 @@ function adjustCellSize(difficulty) {
   canvas.height = rows * cellSize;
 }
 
-// Start game based on difficulty
+// Start game
 function startGame(difficulty) {
   currentDifficulty = difficulty;
   adjustCellSize(difficulty);
@@ -59,29 +51,27 @@ function startGame(difficulty) {
 
   animX = player.x;
   animY = player.y;
+  playerDirection = "right";
 
   drawMaze();
   drawPlayer();
 
-  // Reset timer
   if (timerInterval) clearInterval(timerInterval);
   timerStarted = false;
   document.getElementById("timer").textContent = "⏱ 0:00";
 }
 
+// Restart current game
 function restartGame() {
   startGame(currentDifficulty);
 }
 
 // Random cell
 function randomCell() {
-  return {
-    x: Math.floor(Math.random() * cols),
-    y: Math.floor(Math.random() * rows)
-  };
+  return { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
 }
 
-// Random cell far from start
+// Random cell far enough from start
 function randomCellFarFrom(start) {
   let cell, dist;
   do {
@@ -93,7 +83,7 @@ function randomCellFarFrom(start) {
   return cell;
 }
 
-// Maze cell
+// Maze cell class
 class Cell {
   constructor(x, y) {
     this.x = x;
@@ -103,14 +93,12 @@ class Cell {
   }
 }
 
-// Maze generator (recursive backtracking)
+// Generate maze using recursive backtracker
 function generateMaze(rows, cols) {
   let grid = [];
   for (let y=0; y<rows; y++) {
     let row = [];
-    for (let x=0; x<cols; x++) {
-      row.push(new Cell(x,y));
-    }
+    for (let x=0; x<cols; x++) row.push(new Cell(x,y));
     grid.push(row);
   }
 
@@ -127,13 +115,12 @@ function generateMaze(rows, cols) {
       current.visited = true;
     } else if (stack.length > 0) {
       current = stack.pop();
-    } else {
-      break;
-    }
+    } else break;
   }
   return grid;
 }
 
+// Get unvisited neighbors
 function getUnvisitedNeighbor(cell, grid) {
   let neighbors = [];
   let {x,y} = cell;
@@ -145,6 +132,7 @@ function getUnvisitedNeighbor(cell, grid) {
   return neighbors[Math.floor(Math.random() * neighbors.length)];
 }
 
+// Remove walls between two cells
 function removeWalls(a, b) {
   let dx = b.x - a.x;
   let dy = b.y - a.y;
@@ -154,18 +142,16 @@ function removeWalls(a, b) {
   else if (dy === -1) { a.walls.top = false; b.walls.bottom = false; }
 }
 
-// Solve maze (BFS) for debug
+// Solve maze for debug path
 function solveMaze() {
   let queue = [[player]];
   let visited = new Set([`${player.x},${player.y}`]);
 
   while (queue.length > 0) {
     let path = queue.shift();
-    let cell = path[path.length - 1];
+    let cell = path[path.length-1];
 
-    if (cell.x === exit.x && cell.y === exit.y) {
-      return path;
-    }
+    if (cell.x === exit.x && cell.y === exit.y) return path;
 
     let neighbors = getMovableNeighbors(cell);
     for (let n of neighbors) {
@@ -179,6 +165,7 @@ function solveMaze() {
   return [];
 }
 
+// Get movable neighbors (no walls)
 function getMovableNeighbors(cell) {
   let neighbors = [];
   let c = maze[cell.y][cell.x];
@@ -189,16 +176,18 @@ function getMovableNeighbors(cell) {
   return neighbors;
 }
 
-// Draw maze
+// Draw the maze
 function drawMaze() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "#4A90E2"; 
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
   ctx.strokeStyle = "black";
   ctx.lineWidth = Math.max(2, Math.floor(cellSize / 10));
   for (let y=0; y<rows; y++) {
     for (let x=0; x<cols; x++) {
       let cell = maze[y][x];
-      let px = x * cellSize;
-      let py = y * cellSize;
+      let px = x*cellSize;
+      let py = y*cellSize;
       if (cell.walls.top) drawLine(px, py, px+cellSize, py);
       if (cell.walls.right) drawLine(px+cellSize, py, px+cellSize, py+cellSize);
       if (cell.walls.bottom) drawLine(px, py+cellSize, px+cellSize, py+cellSize);
@@ -206,150 +195,201 @@ function drawMaze() {
     }
   }
 
-  // Debug: show solution path
-  if (DEBUG) {
+  // DEBUG PATH
+  if (debugMode) {
     let path = solveMaze();
-    ctx.strokeStyle = "blue";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,255,0,0.5)";
+    ctx.lineWidth = Math.max(2, cellSize / 8);
     ctx.beginPath();
-    for (let i=0; i<path.length; i++) {
-      let cx = path[i].x * cellSize + cellSize/2;
-      let cy = path[i].y * cellSize + cellSize/2;
-      if (i === 0) ctx.moveTo(cx, cy);
-      else ctx.lineTo(cx, cy);
+    for (let i=0;i<path.length;i++){
+      let cx = path[i].x*cellSize+cellSize/2;
+      let cy = path[i].y*cellSize+cellSize/2;
+      if (i===0) ctx.moveTo(cx,cy);
+      else ctx.lineTo(cx,cy);
     }
     ctx.stroke();
+    
+    // Draw dots at each path point
+    for (let i=0;i<path.length;i++){
+      let cx = path[i].x*cellSize+cellSize/2;
+      let cy = path[i].y*cellSize+cellSize/2;
+      ctx.fillStyle = i === 0 ? "green" : (i === path.length-1 ? "red" : "yellow");
+      ctx.beginPath();
+      ctx.arc(cx, cy, cellSize/6, 0, Math.PI*2);
+      ctx.fill();
+    }
   }
 
   // Draw exit (cheese)
-  if (cheeseImg.complete && cheeseImg.naturalWidth !== 0) {
-    ctx.drawImage(
-      cheeseImg,
-      exit.x*cellSize+2,
-      exit.y*cellSize+2,
-      cellSize-4,
-      cellSize-4
-    );
-  } else {
-    ctx.fillStyle = "green";
-    ctx.fillRect(exit.x*cellSize+2, exit.y*cellSize+2, cellSize-4, cellSize-4);
-  }
+  ctx.fillStyle = "#FFD700";
+  ctx.beginPath();
+  const exitX = exit.x * cellSize + cellSize / 2;
+  const exitY = exit.y * cellSize + cellSize / 2;
+  const cheeseRadius = cellSize * 0.35;
+  
+  // Cheese wedge shape
+  ctx.moveTo(exitX + cheeseRadius, exitY);
+  ctx.arc(exitX, exitY, cheeseRadius, 0, Math.PI * 1.8, false);
+  ctx.lineTo(exitX + cheeseRadius * 0.3, exitY - cheeseRadius * 0.3);
+  ctx.lineTo(exitX + cheeseRadius, exitY);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Cheese holes
+  ctx.fillStyle = "#E67E22";
+  ctx.beginPath();
+  ctx.arc(exitX - cheeseRadius * 0.2, exitY - cheeseRadius * 0.1, cheeseRadius * 0.15, 0, Math.PI * 2);
+  ctx.arc(exitX + cheeseRadius * 0.1, exitY + cheeseRadius * 0.2, cheeseRadius * 0.1, 0, Math.PI * 2);
+  ctx.arc(exitX - cheeseRadius * 0.1, exitY + cheeseRadius * 0.15, cheeseRadius * 0.12, 0, Math.PI * 2);
+  ctx.fill();
 }
 
-function drawLine(x1,y1,x2,y2) {
+function drawLine(x1,y1,x2,y2){
   ctx.beginPath();
   ctx.moveTo(x1,y1);
   ctx.lineTo(x2,y2);
   ctx.stroke();
 }
 
-// Draw player (for initial placement)
-function drawPlayer() {
-  animX = player.x;
-  animY = player.y;
+// Draw the player
+function drawPlayer(){
+  animX=player.x;
+  animY=player.y;
   drawAnimatedPlayer();
 }
 
-// Draw player at animation position
-function drawAnimatedPlayer() {
-  if (mouseImg.complete && mouseImg.naturalWidth !== 0) {
-    ctx.drawImage(
-      mouseImg,
-      animX*cellSize+2,
-      animY*cellSize+2,
-      cellSize-4,
-      cellSize-4
-    );
-  } else {
-    ctx.fillStyle = "red";
-    ctx.beginPath();
-    ctx.arc(
-      animX*cellSize + cellSize/2,
-      animY*cellSize + cellSize/2,
-      cellSize/3,
-      0, Math.PI*2
-    );
-    ctx.fill();
+// Draw a simple red arrow
+function drawAnimatedPlayer(){
+  const centerX = animX * cellSize + cellSize / 2;
+  const centerY = animY * cellSize + cellSize / 2;
+  const arrowSize = cellSize * 0.35;
+
+  ctx.save();
+  ctx.translate(centerX, centerY);
+
+  // Rotate based on direction
+  switch(playerDirection){
+    case "up": ctx.rotate(-Math.PI / 2); break;
+    case "down": ctx.rotate(Math.PI / 2); break;
+    case "left": ctx.rotate(Math.PI); break;
+    case "right": ctx.rotate(0); break;
   }
+
+  // Simple red arrow - just a triangle
+  ctx.fillStyle = "#FF0000";
+  ctx.strokeStyle = "#CC0000";
+  ctx.lineWidth = 2;
+  
+  // Draw arrow as a simple triangle
+  ctx.beginPath();
+  ctx.moveTo(arrowSize, 0);
+  ctx.lineTo(-arrowSize, -arrowSize * 0.8);
+  ctx.lineTo(-arrowSize, arrowSize * 0.8);
+  ctx.closePath();
+  
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
 }
 
-// Timer display
-function updateTimerDisplay() {
-  if (!timerStarted) return;
-  let elapsed = Math.floor((Date.now() - startTime) / 1000);
-  let minutes = Math.floor(elapsed / 60);
-  let seconds = elapsed % 60;
+// Update timer display
+function updateTimerDisplay(){
+  if(!timerStarted) return;
+  let elapsed = Math.floor((Date.now()-startTime)/1000);
+  let minutes = Math.floor(elapsed/60);
+  let seconds = elapsed%60;
   document.getElementById("timer").textContent = `⏱ ${minutes}:${seconds.toString().padStart(2,'0')}`;
 }
 
-// Movement & animation
-document.addEventListener("keydown", e => {
-  if (animating) return;
+// Keyboard input for movement
+document.addEventListener("keydown", e=>{
+  if(animating) return;
 
-  // Start timer on first arrow key press
-  if (!timerStarted && ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
-    timerStarted = true;
-    startTime = Date.now();
-    timerInterval = setInterval(updateTimerDisplay, 1000);
+  if(!timerStarted && ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)){
+    timerStarted=true;
+    startTime=Date.now();
+    timerInterval=setInterval(updateTimerDisplay,1000);
   }
 
   let cell = maze[player.y][player.x];
-  let nx = player.x;
-  let ny = player.y;
+  let nx=player.x;
+  let ny=player.y;
 
-  if (e.key === "ArrowUp" && !cell.walls.top) ny--;
-  if (e.key === "ArrowDown" && !cell.walls.bottom) ny++;
-  if (e.key === "ArrowLeft" && !cell.walls.left) nx--;
-  if (e.key === "ArrowRight" && !cell.walls.right) nx++;
-
-  if (nx !== player.x || ny !== player.y) {
-    animateMove(nx, ny);
+  switch(e.key){
+    case "ArrowUp":
+      if(!cell.walls.top) ny--;
+      playerDirection="up";
+      break;
+    case "ArrowDown":
+      if(!cell.walls.bottom) ny++;
+      playerDirection="down";
+      break;
+    case "ArrowLeft":
+      if(!cell.walls.left) nx--;
+      playerDirection="left";
+      break;
+    case "ArrowRight":
+      if(!cell.walls.right) nx++;
+      playerDirection="right";
+      break;
+    case "d":
+    case "D":
+      // Toggle debug mode
+      debugMode = !debugMode;
+      drawMaze();
+      drawPlayer();
+      console.log("Debug mode:", debugMode);
+      return;
   }
+
+  if(nx!==player.x || ny!==player.y) animateMove(nx,ny);
 });
 
-function animateMove(nx, ny) {
-  animating = true;
-  const startX = animX;
-  const startY = animY;
-  const deltaX = nx - startX;
-  const deltaY = ny - startY;
+// Animate movement
+function animateMove(nx, ny){
+  animating=true;
+  const startX=animX;
+  const startY=animY;
+  const deltaX=nx-startX;
+  const deltaY=ny-startY;
 
-  function step() {
-    animX += deltaX * animSpeed;
-    animY += deltaY * animSpeed;
+  function step(){
+    animX += deltaX*animSpeed;
+    animY += deltaY*animSpeed;
     drawMaze();
     drawAnimatedPlayer();
 
-    if (Math.abs(animX - nx) < 0.01 && Math.abs(animY - ny) < 0.01) {
-      animX = nx;
-      animY = ny;
-      player.x = nx;
-      player.y = ny;
-      drawMaze();
-      drawPlayer();
-      animating = false;
+    if(Math.abs(animX-nx)<0.01 && Math.abs(animY-ny)<0.01){
+      animX=nx; animY=ny;
+      player.x=nx; player.y=ny;
+      drawMaze(); drawPlayer();
+      animating=false;
 
-      // Check win
-      if (player.x === exit.x && player.y === exit.y) {
+      if(player.x===exit.x && player.y===exit.y){
         clearInterval(timerInterval);
-        timerStarted = false;
-        let elapsed = Math.floor((Date.now() - startTime) / 1000);
-        let minutes = Math.floor(elapsed / 60);
-        let seconds = elapsed % 60;
-
-        // Show alert for simplicity
+        timerStarted=false;
+        let elapsed=Math.floor((Date.now()-startTime)/1000);
+        let minutes=Math.floor(elapsed/60);
+        let seconds=elapsed%60;
         alert(`🎉 You won in ${minutes}:${seconds.toString().padStart(2,'0')}!`);
+        updateHighScore(elapsed);
         startGame(currentDifficulty);
       }
-    } else {
-      requestAnimationFrame(step);
-    }
+    } else requestAnimationFrame(step);
   }
-
   requestAnimationFrame(step);
 }
 
-// Auto-start Easy mode
-window.onload = () => {
-  startGame("easy");
-};
+// High score tracking
+function updateHighScore(elapsed){
+  let key=`highscore_${currentDifficulty}`;
+  let prev = localStorage.getItem(key);
+  if(!prev || elapsed < parseInt(prev)){
+    localStorage.setItem(key,elapsed);
+    alert(`🏆 New record for ${currentDifficulty} mode: ${elapsed} seconds!`);
+  }
+}
+
+// Auto-start easy mode
+window.onload = ()=>{ startGame("easy"); };

@@ -2,20 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Maze Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arrow Maze Game</title>
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <h1>Mouse in the Maze 🐭</h1>
+  <h1>Arrow Maze Game</h1>
   <div id="timer">⏱ 0:00</div>
-  <div>
+  <canvas id="gameCanvas"></canvas>
+  <div class="controls">
     <button onclick="startGame('easy')">Easy</button>
     <button onclick="startGame('medium')">Medium</button>
     <button onclick="startGame('hard')">Hard</button>
     <button onclick="restartGame()">Restart</button>
   </div>
-  <canvas id="gameCanvas"></canvas>
-
+  <div class="instructions">
+    <p>Use arrow keys to move the red arrow to the cheese!</p>
+    <p><strong>Press 'D' to toggle debug mode (shows solution path)</strong></p>
+  </div>
   <script src="assets/js/mazeGame.js"></script>
 </body>
 </html>
