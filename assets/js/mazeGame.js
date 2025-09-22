@@ -1,15 +1,16 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-let maze = [];
-let cellSize = 20;
+// Base cell size for visibility
+let baseCellSize = 40;
+let cellSize = baseCellSize;
 let rows, cols;
 let player = {x:0, y:0};
 let exit = {x:0, y:0};
 let currentDifficulty = "easy";
 
 // Debug toggle
-const DEBUG = true; // ✅ set false when done
+const DEBUG = true; // set false when done
 
 // Load sprites
 const mouseImg = new Image();
@@ -18,20 +19,31 @@ mouseImg.src = "assets/img/mouse.png";
 const cheeseImg = new Image();
 cheeseImg.src = "assets/img/cheese.png";
 
-// Start game based on difficulty
-function startGame(difficulty) {
-  currentDifficulty = difficulty;
+// Adjust cell size dynamically based on screen and difficulty
+function adjustCellSize(difficulty) {
+  let maxWidth = window.innerWidth - 40;  // padding
+  let maxHeight = window.innerHeight - 150; // header + buttons
 
   if (difficulty === "easy") { rows = cols = 10; }
   if (difficulty === "medium") { rows = cols = 20; }
   if (difficulty === "hard") { rows = cols = 30; }
 
+  let sizeX = Math.floor(maxWidth / cols);
+  let sizeY = Math.floor(maxHeight / rows);
+  cellSize = Math.min(baseCellSize, sizeX, sizeY);
+
   canvas.width = cols * cellSize;
   canvas.height = rows * cellSize;
+}
+
+// Start game based on difficulty
+function startGame(difficulty) {
+  currentDifficulty = difficulty;
+  adjustCellSize(difficulty);
 
   maze = generateMaze(rows, cols);
 
-  // Random start and exit positions
+  // Random start and exit points
   player = randomCell();
   exit = randomCellFarFrom(player);
 
@@ -43,7 +55,7 @@ function restartGame() {
   startGame(currentDifficulty);
 }
 
-// Pick a random cell
+// Random cell
 function randomCell() {
   return {
     x: Math.floor(Math.random() * cols),
@@ -51,7 +63,7 @@ function randomCell() {
   };
 }
 
-// Pick a random cell far enough from start
+// Random cell far from start
 function randomCellFarFrom(start) {
   let cell, dist;
   do {
@@ -63,7 +75,7 @@ function randomCellFarFrom(start) {
   return cell;
 }
 
-// Maze cell structure
+// Maze cell
 class Cell {
   constructor(x, y) {
     this.x = x;
@@ -73,7 +85,7 @@ class Cell {
   }
 }
 
-// Recursive backtracking maze generator
+// Maze generator (recursive backtracking)
 function generateMaze(rows, cols) {
   let grid = [];
   for (let y=0; y<rows; y++) {
@@ -124,7 +136,7 @@ function removeWalls(a, b) {
   else if (dy === -1) { a.walls.top = false; b.walls.bottom = false; }
 }
 
-// Solve maze using BFS
+// Solve maze (BFS) for debug
 function solveMaze() {
   let queue = [[player]];
   let visited = new Set([`${player.x},${player.y}`]);
@@ -163,7 +175,7 @@ function getMovableNeighbors(cell) {
 function drawMaze() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle = "black";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = Math.max(2, Math.floor(cellSize / 10)); // dynamic thickness
   for (let y=0; y<rows; y++) {
     for (let x=0; x<cols; x++) {
       let cell = maze[y][x];
@@ -176,7 +188,7 @@ function drawMaze() {
     }
   }
 
-  // Debug: draw solution path
+  // Debug: show solution path
   if (DEBUG) {
     let path = solveMaze();
     ctx.strokeStyle = "blue";
@@ -191,18 +203,18 @@ function drawMaze() {
     ctx.stroke();
   }
 
-  // Draw exit (cheese if available)
+  // Draw exit (cheese)
   if (cheeseImg.complete && cheeseImg.naturalWidth !== 0) {
     ctx.drawImage(
       cheeseImg,
-      exit.x*cellSize+4,
-      exit.y*cellSize+4,
-      cellSize-8,
-      cellSize-8
+      exit.x*cellSize+2,
+      exit.y*cellSize+2,
+      cellSize-4,
+      cellSize-4
     );
   } else {
     ctx.fillStyle = "green";
-    ctx.fillRect(exit.x*cellSize+4, exit.y*cellSize+4, cellSize-8, cellSize-8);
+    ctx.fillRect(exit.x*cellSize+2, exit.y*cellSize+2, cellSize-4, cellSize-4);
   }
 }
 
@@ -213,7 +225,7 @@ function drawLine(x1,y1,x2,y2) {
   ctx.stroke();
 }
 
-// Draw player (mouse sprite, fallback red circle)
+// Draw player (mouse sprite or fallback red circle)
 function drawPlayer() {
   if (mouseImg.complete && mouseImg.naturalWidth !== 0) {
     ctx.drawImage(
@@ -236,7 +248,7 @@ function drawPlayer() {
   }
 }
 
-// Movement
+// Movement controls
 document.addEventListener("keydown", e => {
   let cell = maze[player.y][player.x];
   let nx = player.x;
@@ -252,13 +264,26 @@ document.addEventListener("keydown", e => {
     player.y = ny;
     drawMaze();
     drawPlayer();
+
+    // Win behavior
     if (player.x === exit.x && player.y === exit.y) {
-      setTimeout(()=>alert("🎉 You win!"), 50);
+      // Draw overlay message
+     ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+ctx.fillRect(0, canvas.height/2 - 20, canvas.width, 40);
+ctx.fillStyle = "white";
+ctx.font = `${Math.floor(cellSize / 1.5)}px Arial`; // smaller font
+ctx.textAlign = "center";
+ctx.fillText("🎉 You won! Starting new game...", canvas.width/2, canvas.height/2 + 7);
+
+      // Restart after short delay
+      setTimeout(() => {
+        startGame(currentDifficulty);
+      }, 1500);
     }
   }
 });
-// Auto-start the game in easy mode when page loads
+
+// Auto-start game in Easy mode
 window.onload = () => {
   startGame("easy");
 };
- 
