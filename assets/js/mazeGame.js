@@ -7,6 +7,7 @@ let rows, cols;
 let player = {x:0, y:0};
 let exit = {x:0, y:0};
 let currentDifficulty = "easy";
+let maze = [];
 
 let startTime = null;
 let timerInterval = null;
@@ -74,12 +75,17 @@ function randomCell() {
 // Random cell far enough from start
 function randomCellFarFrom(start) {
   let cell, dist;
+  let maxAttempts = 100;
+  let attempts = 0;
+  
   do {
     cell = randomCell();
     let dx = cell.x - start.x;
     let dy = cell.y - start.y;
     dist = Math.abs(dx) + Math.abs(dy);
-  } while (dist < Math.floor(Math.max(rows, cols) / 2));
+    attempts++;
+  } while (dist < Math.floor(Math.max(rows, cols) / 2) && attempts < maxAttempts);
+  
   return cell;
 }
 
@@ -302,6 +308,82 @@ function updateTimerDisplay(){
   document.getElementById("timer").textContent = `⏱ ${minutes}:${seconds.toString().padStart(2,'0')}`;
 }
 
+// Modern Notification System
+function showNotification(message, type = 'info', duration = 4000) {
+  const container = document.getElementById('notification-container');
+  const notification = document.createElement('div');
+  notification.className = `notification ${type}`;
+  
+  const icons = {
+    success: '🎉',
+    record: '🏆',
+    info: 'ℹ️'
+  };
+  
+  notification.innerHTML = `
+    <div class="notification-content">
+      <span class="icon">${icons[type] || icons.info}</span>
+      <span class="message">${message}</span>
+      <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
+    </div>
+    <div class="notification-progress">
+      <div class="notification-progress-bar ${duration > 0 ? 'animating' : ''}"></div>
+    </div>
+  `;
+  
+  container.appendChild(notification);
+  
+  // Trigger animation
+  setTimeout(() => notification.classList.add('show'), 10);
+  
+  // Auto-remove after duration
+  if (duration > 0) {
+    setTimeout(() => {
+      notification.classList.remove('show');
+      notification.classList.add('hide');
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 400);
+    }, duration);
+  }
+  
+  // Click to dismiss
+  notification.addEventListener('click', (e) => {
+    if (!e.target.classList.contains('close-btn')) {
+      notification.classList.remove('show');
+      notification.classList.add('hide');
+      setTimeout(() => notification.remove(), 400);
+    }
+  });
+  
+  return notification;
+}
+
+// Updated high score tracking with modern notifications
+function updateHighScore(elapsed) {
+  let key = `highscore_${currentDifficulty}`;
+  let prev = localStorage.getItem(key);
+  let isNewRecord = false;
+  
+  if (!prev || elapsed < parseInt(prev)) {
+    localStorage.setItem(key, elapsed);
+    isNewRecord = true;
+    
+    let minutes = Math.floor(elapsed / 60);
+    let seconds = elapsed % 60;
+    let timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    showNotification(
+      `New ${currentDifficulty} record: ${timeString} seconds! 🎯`,
+      'record',
+      5000
+    );
+  }
+  return isNewRecord;
+}
+
 // Keyboard input for movement
 document.addEventListener("keydown", e=>{
   if(animating) return;
@@ -372,24 +454,33 @@ function animateMove(nx, ny){
         let elapsed=Math.floor((Date.now()-startTime)/1000);
         let minutes=Math.floor(elapsed/60);
         let seconds=elapsed%60;
-        alert(`🎉 You won in ${minutes}:${seconds.toString().padStart(2,'0')}!`);
+        
+        // Modern notification instead of alert
+        showNotification(
+          `You completed the ${currentDifficulty} maze in ${minutes}:${seconds.toString().padStart(2,'0')}!`,
+          'success',
+          4000
+        );
+        
+        // Update high score (shows separate notification if record)
         updateHighScore(elapsed);
-        startGame(currentDifficulty);
+        
+        // Restart after delay
+        setTimeout(() => {
+          startGame(currentDifficulty);
+        }, 3000);
       }
     } else requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
 }
 
-// High score tracking
-function updateHighScore(elapsed){
-  let key=`highscore_${currentDifficulty}`;
-  let prev = localStorage.getItem(key);
-  if(!prev || elapsed < parseInt(prev)){
-    localStorage.setItem(key,elapsed);
-    alert(`🏆 New record for ${currentDifficulty} mode: ${elapsed} seconds!`);
-  }
-}
-
 // Auto-start easy mode
 window.onload = ()=>{ startGame("easy"); };
+
+// Window resize handling
+window.addEventListener('resize', () => {
+  adjustCellSize(currentDifficulty);
+  drawMaze();
+  drawPlayer();
+});
