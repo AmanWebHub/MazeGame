@@ -8,6 +8,9 @@ let player = {x:0, y:0};
 let exit = {x:0, y:0};
 let currentDifficulty = "easy";
 
+// Debug toggle
+const DEBUG = true; // ✅ set false when done
+
 // Load sprites
 const mouseImg = new Image();
 mouseImg.src = "assets/img/mouse.png";
@@ -55,7 +58,7 @@ function randomCellFarFrom(start) {
     cell = randomCell();
     let dx = cell.x - start.x;
     let dy = cell.y - start.y;
-    dist = Math.abs(dx) + Math.abs(dy); // Manhattan distance
+    dist = Math.abs(dx) + Math.abs(dy);
   } while (dist < Math.floor(Math.max(rows, cols) / 2));
   return cell;
 }
@@ -104,10 +107,10 @@ function generateMaze(rows, cols) {
 function getUnvisitedNeighbor(cell, grid) {
   let neighbors = [];
   let {x,y} = cell;
-  if (y > 0 && !grid[y-1][x].visited) neighbors.push(grid[y-1][x]);      // top
-  if (x < cols-1 && !grid[y][x+1].visited) neighbors.push(grid[y][x+1]); // right
-  if (y < rows-1 && !grid[y+1][x].visited) neighbors.push(grid[y+1][x]); // bottom
-  if (x > 0 && !grid[y][x-1].visited) neighbors.push(grid[y][x-1]);      // left
+  if (y > 0 && !grid[y-1][x].visited) neighbors.push(grid[y-1][x]);
+  if (x < cols-1 && !grid[y][x+1].visited) neighbors.push(grid[y][x+1]);
+  if (y < rows-1 && !grid[y+1][x].visited) neighbors.push(grid[y+1][x]);
+  if (x > 0 && !grid[y][x-1].visited) neighbors.push(grid[y][x-1]);
   if (neighbors.length === 0) return undefined;
   return neighbors[Math.floor(Math.random() * neighbors.length)];
 }
@@ -119,6 +122,41 @@ function removeWalls(a, b) {
   else if (dx === -1) { a.walls.left = false; b.walls.right = false; }
   else if (dy === 1) { a.walls.bottom = false; b.walls.top = false; }
   else if (dy === -1) { a.walls.top = false; b.walls.bottom = false; }
+}
+
+// Solve maze using BFS
+function solveMaze() {
+  let queue = [[player]];
+  let visited = new Set([`${player.x},${player.y}`]);
+
+  while (queue.length > 0) {
+    let path = queue.shift();
+    let cell = path[path.length - 1];
+
+    if (cell.x === exit.x && cell.y === exit.y) {
+      return path;
+    }
+
+    let neighbors = getMovableNeighbors(cell);
+    for (let n of neighbors) {
+      let key = `${n.x},${n.y}`;
+      if (!visited.has(key)) {
+        visited.add(key);
+        queue.push([...path, n]);
+      }
+    }
+  }
+  return [];
+}
+
+function getMovableNeighbors(cell) {
+  let neighbors = [];
+  let c = maze[cell.y][cell.x];
+  if (!c.walls.top) neighbors.push({x:cell.x, y:cell.y-1});
+  if (!c.walls.right) neighbors.push({x:cell.x+1, y:cell.y});
+  if (!c.walls.bottom) neighbors.push({x:cell.x, y:cell.y+1});
+  if (!c.walls.left) neighbors.push({x:cell.x-1, y:cell.y});
+  return neighbors;
 }
 
 // Draw maze
@@ -136,6 +174,21 @@ function drawMaze() {
       if (cell.walls.bottom) drawLine(px, py+cellSize, px+cellSize, py+cellSize);
       if (cell.walls.left) drawLine(px, py, px, py+cellSize);
     }
+  }
+
+  // Debug: draw solution path
+  if (DEBUG) {
+    let path = solveMaze();
+    ctx.strokeStyle = "blue";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i=0; i<path.length; i++) {
+      let cx = path[i].x * cellSize + cellSize/2;
+      let cy = path[i].y * cellSize + cellSize/2;
+      if (i === 0) ctx.moveTo(cx, cy);
+      else ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
   }
 
   // Draw exit (cheese if available)
@@ -204,3 +257,8 @@ document.addEventListener("keydown", e => {
     }
   }
 });
+// Auto-start the game in easy mode when page loads
+window.onload = () => {
+  startGame("easy");
+};
+ 
