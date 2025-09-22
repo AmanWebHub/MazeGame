@@ -9,6 +9,17 @@ let player = {x:0, y:0};
 let exit = {x:0, y:0};
 let currentDifficulty = "easy";
 
+// Timer variables
+let startTime = null;
+let timerInterval = null;
+let timerStarted = false;
+
+// Animation variables
+let animating = false;
+let animX = 0;
+let animY = 0;
+const animSpeed = 0.2; // fraction per frame
+
 // Debug toggle
 const DEBUG = true; // set false when done
 
@@ -21,8 +32,8 @@ cheeseImg.src = "assets/img/cheese.png";
 
 // Adjust cell size dynamically based on screen and difficulty
 function adjustCellSize(difficulty) {
-  let maxWidth = window.innerWidth - 40;  // padding
-  let maxHeight = window.innerHeight - 150; // header + buttons
+  let maxWidth = window.innerWidth - 40;
+  let maxHeight = window.innerHeight - 150;
 
   if (difficulty === "easy") { rows = cols = 10; }
   if (difficulty === "medium") { rows = cols = 20; }
@@ -43,12 +54,19 @@ function startGame(difficulty) {
 
   maze = generateMaze(rows, cols);
 
-  // Random start and exit points
   player = randomCell();
   exit = randomCellFarFrom(player);
 
+  animX = player.x;
+  animY = player.y;
+
   drawMaze();
   drawPlayer();
+
+  // Reset timer
+  if (timerInterval) clearInterval(timerInterval);
+  timerStarted = false;
+  document.getElementById("timer").textContent = "⏱ 0:00";
 }
 
 function restartGame() {
@@ -175,7 +193,7 @@ function getMovableNeighbors(cell) {
 function drawMaze() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle = "black";
-  ctx.lineWidth = Math.max(2, Math.floor(cellSize / 10)); // dynamic thickness
+  ctx.lineWidth = Math.max(2, Math.floor(cellSize / 10));
   for (let y=0; y<rows; y++) {
     for (let x=0; x<cols; x++) {
       let cell = maze[y][x];
@@ -225,13 +243,20 @@ function drawLine(x1,y1,x2,y2) {
   ctx.stroke();
 }
 
-// Draw player (mouse sprite or fallback red circle)
+// Draw player (for initial placement)
 function drawPlayer() {
+  animX = player.x;
+  animY = player.y;
+  drawAnimatedPlayer();
+}
+
+// Draw player at animation position
+function drawAnimatedPlayer() {
   if (mouseImg.complete && mouseImg.naturalWidth !== 0) {
     ctx.drawImage(
       mouseImg,
-      player.x*cellSize+2,
-      player.y*cellSize+2,
+      animX*cellSize+2,
+      animY*cellSize+2,
       cellSize-4,
       cellSize-4
     );
@@ -239,8 +264,8 @@ function drawPlayer() {
     ctx.fillStyle = "red";
     ctx.beginPath();
     ctx.arc(
-      player.x*cellSize + cellSize/2,
-      player.y*cellSize + cellSize/2,
+      animX*cellSize + cellSize/2,
+      animY*cellSize + cellSize/2,
       cellSize/3,
       0, Math.PI*2
     );
@@ -248,8 +273,26 @@ function drawPlayer() {
   }
 }
 
-// Movement controls
+// Timer display
+function updateTimerDisplay() {
+  if (!timerStarted) return;
+  let elapsed = Math.floor((Date.now() - startTime) / 1000);
+  let minutes = Math.floor(elapsed / 60);
+  let seconds = elapsed % 60;
+  document.getElementById("timer").textContent = `⏱ ${minutes}:${seconds.toString().padStart(2,'0')}`;
+}
+
+// Movement & animation
 document.addEventListener("keydown", e => {
+  if (animating) return;
+
+  // Start timer on first arrow key press
+  if (!timerStarted && ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
+    timerStarted = true;
+    startTime = Date.now();
+    timerInterval = setInterval(updateTimerDisplay, 1000);
+  }
+
   let cell = maze[player.y][player.x];
   let nx = player.x;
   let ny = player.y;
@@ -259,31 +302,54 @@ document.addEventListener("keydown", e => {
   if (e.key === "ArrowLeft" && !cell.walls.left) nx--;
   if (e.key === "ArrowRight" && !cell.walls.right) nx++;
 
-  if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
-    player.x = nx;
-    player.y = ny;
-    drawMaze();
-    drawPlayer();
-
-    // Win behavior
-    if (player.x === exit.x && player.y === exit.y) {
-      // Draw overlay message
-     ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-ctx.fillRect(0, canvas.height/2 - 20, canvas.width, 40);
-ctx.fillStyle = "white";
-ctx.font = `${Math.floor(cellSize / 1.5)}px Arial`; // smaller font
-ctx.textAlign = "center";
-ctx.fillText("🎉 You won! Starting new game...", canvas.width/2, canvas.height/2 + 7);
-
-      // Restart after short delay
-      setTimeout(() => {
-        startGame(currentDifficulty);
-      }, 1500);
-    }
+  if (nx !== player.x || ny !== player.y) {
+    animateMove(nx, ny);
   }
 });
 
-// Auto-start game in Easy mode
+function animateMove(nx, ny) {
+  animating = true;
+  const startX = animX;
+  const startY = animY;
+  const deltaX = nx - startX;
+  const deltaY = ny - startY;
+
+  function step() {
+    animX += deltaX * animSpeed;
+    animY += deltaY * animSpeed;
+    drawMaze();
+    drawAnimatedPlayer();
+
+    if (Math.abs(animX - nx) < 0.01 && Math.abs(animY - ny) < 0.01) {
+      animX = nx;
+      animY = ny;
+      player.x = nx;
+      player.y = ny;
+      drawMaze();
+      drawPlayer();
+      animating = false;
+
+      // Check win
+      if (player.x === exit.x && player.y === exit.y) {
+        clearInterval(timerInterval);
+        timerStarted = false;
+        let elapsed = Math.floor((Date.now() - startTime) / 1000);
+        let minutes = Math.floor(elapsed / 60);
+        let seconds = elapsed % 60;
+
+        // Show alert for simplicity
+        alert(`🎉 You won in ${minutes}:${seconds.toString().padStart(2,'0')}!`);
+        startGame(currentDifficulty);
+      }
+    } else {
+      requestAnimationFrame(step);
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+
+// Auto-start Easy mode
 window.onload = () => {
   startGame("easy");
 };
