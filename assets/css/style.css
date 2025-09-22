@@ -1,3 +1,8 @@
+
+html {
+  scroll-behavior: smooth;
+}
+
 /* General page styling */
 body {
   margin: 0;
@@ -163,10 +168,7 @@ canvas:hover {
   color: #FFD700;
 }
 
-/* Smooth scrolling for the whole page */
-html {
-  scroll-behavior: smooth;
-}
+
 
 /* Modern Notification System */
 #notification-container {
