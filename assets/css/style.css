@@ -1,296 +1,77 @@
-
-html {
-  scroll-behavior: smooth;
+/* Prevent any scrolling */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
-/* General page styling */
 body {
-  margin: 0;
   font-family: "Arial", sans-serif;
   display: flex;
   flex-direction: column;
   align-items: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
-  min-height: 100vh;
-  padding: 20px;
+  padding: 10px;
   box-sizing: border-box;
 }
 
-/* Game title */
+/* Game title - make it smaller on constrained screens */
 h1 {
-  margin-top: 10px;
-  margin-bottom: 10px;
-  font-size: 3em;
+  margin: 5px 0;
+  font-size: 2.5em;
   text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
   background: linear-gradient(45deg, #FFD700, #FFA500);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  color: #FFD700; /* Fallback for very old browsers */
   text-align: center;
 }
 
-/* Timer styling */
-#timer {
-  font-size: 1.5em;
-  margin: 5px 0;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
-  font-weight: bold;
-  color: #4CD964;
-}
-
-/* Buttons styling */
-button {
-  padding: 12px 24px;
-  margin: 5px;
-  font-size: 1.1em;
-  font-weight: bold;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  background: linear-gradient(145deg, #ff9800, #e68900);
-  color: white;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  min-width: 120px;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
-
-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-  background: linear-gradient(145deg, #e68900, #cc7700);
-}
-
-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-button:focus {
-  outline: 2px solid #4CD964;
-  outline-offset: 2px;
-}
-
-/* Canvas styling */
+/* Canvas - constrained to viewport */
 canvas {
   border: 4px solid #2C3E50;
   border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  margin: 15px 0;
+  margin: 10px 0;
   background: rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
   max-width: 95vw;
+  max-height: 65vh;
+  display: block;
 }
 
-canvas:hover {
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
-  transform: scale(1.01);
+/* Buttons - make them more compact */
+button {
+  padding: 8px 16px;
+  margin: 3px;
+  font-size: 0.9em;
+  min-width: 100px;
 }
 
-/* Instructions */
-.instructions {
-  margin-top: 15px;
-  text-align: center;
-  font-size: 1.1em;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-  color: #E0E0E0;
-}
-
-.instructions p {
-  margin: 5px 0;
-}
-
-/* Controls container */
-.controls {
-  margin: 15px 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-}
-
-/* Add vendor prefix for gap for older browsers */
-@supports not (gap: 10px) {
-  .controls {
-    margin: -5px; /* Negative margin to compensate for button margins */
-  }
-  .controls button {
-    margin: 5px;
-  }
-}
-
-/* Responsive design */
+/* Make everything more compact on smaller screens */
 @media (max-width: 768px) {
   h1 {
-    font-size: 2em;
+    font-size: 1.8em;
+    margin: 2px 0;
   }
   
   #timer {
-    font-size: 1.2em;
-  }
-  
-  button {
-    padding: 10px 20px;
     font-size: 1em;
-    min-width: 100px;
+    margin: 2px 0;
   }
   
-  .controls {
-    flex-direction: column;
-    align-items: center;
+  canvas {
+    margin: 5px 0;
+    max-height: 60vh;
   }
   
-  body {
-    padding: 10px;
-  }
-}
-
-/* Improved fallback for browsers that don't support background-clip: text */
-@supports not (background-clip: text) {
-  h1 {
-    background: transparent;
-    background-clip: initial;
-    -webkit-background-clip: initial;
-    -webkit-text-fill-color: initial;
-    color: #FFFFFF; /* White for better contrast on gradient background */
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8); /* Enhanced shadow for readability */
-  }
-}
-
-/* Additional safety for very old browsers */
-.no-cssgradients h1 {
-  background: transparent;
-  color: #FFD700;
-}
-
-
-
-/* Modern Notification System */
-#notification-container {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 350px;
-}
-
-.notification {
-  padding: 16px 20px;
-  border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-  color: white;
-  font-weight: 600;
-  font-size: 1em;
-  line-height: 1.4;
-  transform: translateX(400px);
-  opacity: 0;
-  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  cursor: pointer;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.notification.show {
-  transform: translateX(0);
-  opacity: 1;
-}
-
-.notification.hide {
-  transform: translateX(400px);
-  opacity: 0;
-}
-
-.notification.success {
-  background: linear-gradient(135deg, #4CD964, #2ECC71);
-  border-left: 4px solid #27AE60;
-}
-
-.notification.record {
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  border-left: 4px solid #FF8C00;
-  color: #2C3E50;
-}
-
-.notification.info {
-  background: linear-gradient(135deg, #3498DB, #2980B9);
-  border-left: 4px solid #1F618D;
-}
-
-.notification .notification-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.notification .icon {
-  font-size: 1.5em;
-  flex-shrink: 0;
-}
-
-.notification .message {
-  flex-grow: 1;
-}
-
-.notification .close-btn {
-  background: none;
-  border: none;
-  color: inherit;
-  font-size: 1.2em;
-  cursor: pointer;
-  opacity: 0.7;
-  padding: 4px;
-  border-radius: 4px;
-  transition: opacity 0.2s;
-}
-
-.notification .close-btn:hover {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Progress bar for auto-dismiss */
-.notification-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 0 0 12px 12px;
-  overflow: hidden;
-}
-
-.notification-progress-bar {
-  height: 100%;
-  background: rgba(255, 255, 255, 0.6);
-  width: 100%;
-  transform: scaleX(1);
-  transform-origin: left;
-  transition: transform 4s linear;
-}
-
-.notification-progress-bar.animating {
-  transform: scaleX(0);
-}
-
-/* Responsive notifications */
-@media (max-width: 768px) {
-  #notification-container {
-    top: 10px;
-    right: 10px;
-    left: 10px;
-    max-width: none;
-  }
-  
-  .notification {
-    max-width: none;
+  .instructions {
+    font-size: 0.9em;
+    margin-top: 8px;
   }
 }
