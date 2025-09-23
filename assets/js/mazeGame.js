@@ -18,15 +18,16 @@ let animX = 0;
 let animY = 0;
 const animSpeed = 0.2;
 
-let debugMode = false;
+let debugMode = true;
 
 // Player direction
 let playerDirection = "right";
 
-// Adjust cell size based on window size and difficulty
+// Adjust cell size based on viewport size and difficulty
 function adjustCellSize(difficulty) {
-  let maxWidth = window.innerWidth - 40;
-  let maxHeight = window.innerHeight - 150;
+  // Use viewport dimensions instead of window inner dimensions
+  let maxWidth = Math.min(window.innerWidth, document.documentElement.clientWidth) - 40;
+  let maxHeight = Math.min(window.innerHeight, document.documentElement.clientHeight) - 200;
 
   if (difficulty === "easy") { rows = cols = 10; }
   if (difficulty === "medium") { rows = cols = 20; }
@@ -36,12 +37,23 @@ function adjustCellSize(difficulty) {
   let sizeY = Math.floor(maxHeight / rows);
   cellSize = Math.min(baseCellSize, sizeX, sizeY);
 
+  // Ensure minimum cell size
+  cellSize = Math.max(20, cellSize);
+
   canvas.width = cols * cellSize;
   canvas.height = rows * cellSize;
+
+  // Prevent canvas from exceeding viewport
+  canvas.style.maxWidth = "95vw";
+  canvas.style.maxHeight = "70vh";
 }
 
 // Start game
 function startGame(difficulty) {
+  // Reset any scroll position
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  
   currentDifficulty = difficulty;
   adjustCellSize(difficulty);
 
@@ -475,12 +487,22 @@ function animateMove(nx, ny){
   requestAnimationFrame(step);
 }
 
-// Auto-start easy mode
-window.onload = ()=>{ startGame("easy"); };
-
-// Window resize handling
+// Enhanced window resize handling with debounce
+let resizeTimeout;
 window.addEventListener('resize', () => {
-  adjustCellSize(currentDifficulty);
-  drawMaze();
-  drawPlayer();
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    adjustCellSize(currentDifficulty);
+    drawMaze();
+    drawPlayer();
+  }, 250);
 });
+
+// Auto-start easy mode
+window.onload = ()=>{ 
+  // Prevent initial scroll
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  
+  startGame("easy"); 
+};
