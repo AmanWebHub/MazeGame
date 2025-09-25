@@ -18,7 +18,7 @@ let animX = 0;
 let animY = 0;
 const animSpeed = 0.2;
 
-let debugMode = true;
+let debugMode = false;
 
 // Player direction
 let playerDirection = "right";
